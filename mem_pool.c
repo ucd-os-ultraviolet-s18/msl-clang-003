@@ -307,10 +307,10 @@ alloc_status mem_pool_close(pool_pt pool) {
     {
         return ALLOC_FAIL;
     }
-//    if (manager->pool.num_allocs == 0)
-//    {
-//        return ALLOC_FAIL;
-//    }
+    if (manager->pool.num_allocs != 0)
+    {
+        return ALLOC_FAIL;
+    }
     // check if it has zero allocations
 
     // free memory pool
@@ -347,17 +347,110 @@ alloc_status mem_pool_close(pool_pt pool) {
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 void * mem_new_alloc(pool_pt pool, size_t size) {
     // get mgr from pool by casting the pointer to (pool_mgr_pt)
-
+int i;
     pool_mgr_pt manager = ((pool_mgr_pt)pool);
 
     // check if any gaps, return null if none
-
+        if (manager->pool.num_gaps == 0)
+        {
+            return NULL;
+        }
     // expand heap node, if necessary, quit on error
+    alloc_status check;
+    check = _mem_resize_node_heap(manager);
+
+
     // check used nodes fewer than total nodes, quit on error
+    if (manager->total_nodes< manager->used_nodes )
+    {
+        return NULL;
+    }
+
+// SOME DETAIL REMOVE
+//    if (manager->pool.alloc_size < size)
+//    {
+//        return NULL;
+//    }
 
     // get a node for allocation:
     // if FIRST_FIT, then find the first sufficient node in the node heap
     // if BEST_FIT, then find the first sufficient node in the gap index
+
+    node_t temp ;
+
+    // if there is nothing in the heap
+//    if (manager->node_heap[0].alloc_record.size == manager->pool.total_size && manager->node_heap == manager->gap_ix->node)
+//    {
+//        manager->node_heap[1].alloc_record.size = size;
+//        manager->node_heap[1].alloc_record.mem = manager->pool.mem;
+//        manager->node_heap[1].allocated = 1;
+//        manager->node_heap[1].used = 1;
+//        manager->node_heap[1].next = &manager->node_heap[0];
+//        manager->node_heap[1].prev = NULL;// done intentionally vai the diagrams
+//        manager->node_heap[0].next = NULL;
+//        manager->node_heap[0].prev = &manager->node_heap[1];
+//        //update number of allocs and the size of the pool
+//        manager->pool.alloc_size += size;
+//        manager->pool.num_allocs++;
+//        // update the size of everything
+//        manager->node_heap[0].alloc_record.size -= size;
+//        manager->gap_ix[0].size -= size;
+//    }
+
+    if (pool->policy == FIRST_FIT)
+    {
+
+
+// find an available node
+        //traverse the list looking for the node that isn't allocated
+        while(manager->node_heap[i].allocated == 1 )
+        {
+            i++;
+        }
+// signifies a gap that has the capacity for the applicable node
+        if (manager->node_heap[i].used == 1 && manager->node_heap[i].allocated == 0 &&
+                manager->node_heap[i].alloc_record.size > size )
+        {
+
+        manager->node_heap[i+1].alloc_record.size = size;
+        manager->node_heap[i+1].alloc_record.mem = manager->pool.mem;
+        manager->node_heap[i+1].allocated = 1;
+        manager->node_heap[i+1].used = 1;
+        manager->node_heap[i+1].next = &manager->node_heap[i];
+        manager->node_heap[i+1].prev = NULL;// done intentionally vai the diagrams
+        manager->node_heap[i].next = NULL;
+        manager->node_heap[i].prev = &manager->node_heap[1];
+        //update number of allocs and the size of the pool
+        manager->pool.alloc_size += size;
+        manager->pool.num_allocs++;
+        // update the size of everything
+        manager->node_heap[i].alloc_record.size -= size;
+        manager->gap_ix[i].size -= size;
+
+        // swap the nodes to put the gap on the bottom
+            temp = manager->node_heap[i+1];
+            manager->node_heap[i+1] = manager->node_heap[i];
+            manager->node_heap[i] = temp;
+
+
+
+        }
+
+
+// signifies the total remaining gap
+
+//        if (manager->node_heap[i].used == 1&& manager->node_heap[i].allocated == 0)
+
+        //
+
+
+
+    }
+    if (pool->policy == BEST_FIT)
+    {
+
+    }
+
     // check if node found
     // update metadata (num_allocs, alloc_size)
     // calculate the size of the remaining gap, if any
@@ -376,24 +469,10 @@ void * mem_new_alloc(pool_pt pool, size_t size) {
     // return allocation record by casting the node to (alloc_pt)
 
 
-    //REMOVE THIS CODE BELOW
 
-//    if (pool_store != NULL){
-//        //pool_store = (pool_mgr_pt*)malloc(size*sizeof(pool_mgr_pt));
-//        (*pool_store)->pool.mem = (char*)malloc(size*sizeof(char*));
-//        (*pool_store)->pool.alloc_size = size;
-//        (*pool_store)->pool.num_allocs = 0;
-//        (*pool_store)->pool.num_gaps = 1;
-//        (*pool_store)->pool.total_size = size;
-//
-//        (*pool_store)->gap_ix = (gap_pt)malloc(size*sizeof(gap_t));
-//        //(*pool_store)->gap_ix->size = size;
-//
-//        void* some;
-//        return some;
-//
-//
-//    }
+
+
+
 
 
 
