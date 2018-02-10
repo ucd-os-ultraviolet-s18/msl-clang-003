@@ -499,30 +499,114 @@ void * mem_new_alloc(pool_pt pool, size_t size) {
 
     // This function deallocates the given allocation from the given memory pool
     alloc_status mem_del_alloc(pool_pt pool, void * alloc) {
+
         // get mgr from pool by casting the pointer to (pool_mgr_pt)
+        pool_mgr_pt managerPtr = ((pool_mgr_pt)pool);
+
         // get node from alloc by casting the pointer to (node_pt)
+        node_pt deletePtr = ((node_pt)alloc);
+
         // find the node in the node heap
         // this is node-to-delete
-        // make sure it's found
+        node_pt nodePtr = managerPtr->node_heap; // point at head of linked list
+        while (nodePtr != deletePtr) nodePtr = nodePtr->next; // traverse to find node
+
+        // if we've gone to the end of the list and not found it
+        if (nodePtr == NULL) {
+            printf("Node to delete not found in memory pool");
+            return ALLOC_NOT_FREED;
+        }
+
         // convert to gap node
+        nodePtr->allocated = 0;
+        nodePtr->alloc_record.mem = NULL;
+
+        // add gap to gap index
+        _mem_add_to_gap_ix(managerPtr, nodePtr->alloc_record.size, nodePtr);
+
         // update metadata (num_allocs, alloc_size)
+        pool->num_allocs--;
+        pool->num_gaps++;
+        pool->alloc_size = pool->alloc_size - nodePtr->alloc_record.size;
+
+
+
         // if the next node in the list is also a gap, merge into node-to-delete
-        //   remove the next node from gap index
-        //   check success
-        //   add the size to the node-to-delete
-        //   update node as unused
-        //   update metadata (used nodes)
-        //   update linked list:
-        /*
-                        if (next->next) {
-                            next->next->prev = node_to_del;
-                            node_to_del->next = next->next;
-                        } else {
-                            node_to_del->next = NULL;
-                        }
-                        next->next = NULL;
-                        next->prev = NULL;
-         */
+
+        if (nodePtr->next->allocated == 0) {
+
+            node_pt extraGap = nodePtr->next;
+
+            //   add the size to the node-to-delete
+            nodePtr->alloc_record.size =
+                    nodePtr->alloc_record.size + extraGap->alloc_record.size;
+
+            //   remove the next node from gap index
+            _mem_remove_from_gap_ix(managerPtr, extraGap->alloc_record.size, extraGap);
+
+            //   check success
+            // traverse the array to see if we can find the node or reach the end of the array
+            int i = 0;
+            while (managerPtr->gap_ix[i].node != extraGap && i < managerPtr->gap_ix_capacity) i++;
+            if (managerPtr->gap_ix[i].node == extraGap) {
+                printf("Error: node not deleted from gap index");
+                return ALLOC_NOT_FREED; // ideally this should never happen
+            }
+
+            // update old gapnode as unused
+            extraGap->alloc_record.size = 0;
+            extraGap->alloc_record.mem = NULL; // should already be null but eh
+            extraGap->used = 0;
+            extraGap->prev = NULL;
+
+            // connects the new gap to the node after the merged gap
+            nodePtr->next = extraGap->next;
+
+            extraGap->next = NULL;
+
+            // update metadata of pool
+            pool->num_gaps--;
+        }
+
+        // -----------------------------------------------------------------------------------
+        // if the previous node is a gap node
+        if (nodePtr->prev->allocated == 0) {
+
+            node_pt extraGap = nodePtr->prev;
+
+            //   add the size to the node-to-delete
+            nodePtr->alloc_record.size =
+                    nodePtr->alloc_record.size + extraGap->alloc_record.size;
+
+            //   remove the next node from gap index
+            _mem_remove_from_gap_ix(managerPtr, extraGap->alloc_record.size, extraGap);
+
+            //   check success
+            // traverse the array to see if we can find the node or reach the end of the array
+            int i = 0;
+            while (managerPtr->gap_ix[i].node != extraGap && i < managerPtr->gap_ix_capacity) i++;
+            if (managerPtr->gap_ix[i].node == extraGap) {
+                printf("Error: node not deleted from gap index");
+                return ALLOC_NOT_FREED; // ideally this should never happen
+            }
+
+            // update old gapnode as unused
+            extraGap->alloc_record.size = 0;
+            extraGap->alloc_record.mem = NULL; // should already be null but eh
+            extraGap->used = 0;
+
+            // set the previous on nodePtr
+            // then remove previous on gap
+            nodePtr->prev = extraGap->prev;
+            extraGap->prev = NULL;
+
+            // nodeptr->next is already pointing to correct thing
+            extraGap->next = NULL;
+
+            // keep track of correct number of gaps
+            pool->num_gaps--;
+
+        }
 
         // this merged node-to-delete might need to be added to the gap index
         // but one more thing to check...
@@ -532,22 +616,25 @@ void * mem_new_alloc(pool_pt pool, size_t size) {
         //   add the size of node-to-delete to the previous
         //   update node-to-delete as unused
         //   update metadata (used_nodes)
-        //   update linked list
-        /*
-                        if (node_to_del->next) {
-                            prev->next = node_to_del->next;
-                            node_to_del->next->prev = prev;
-                        } else {
-                            prev->next = NULL;
-                        }
-                        node_to_del->next = NULL;
-                        node_to_del->prev = NULL;
-         */
         //   change the node to add to the previous node!
         // add the resulting node to the gap index
-        // check success
 
-        return ALLOC_FAIL;
+        // organize gap index
+        _mem_sort_gap_ix(managerPtr);
+
+        // check success
+        nodePtr = managerPtr->node_heap; // point nodePtr back at the head
+
+        // look for the new gapnode in the linked list
+        while (nodePtr != deletePtr) nodePtr = nodePtr->next;
+        if (nodePtr == NULL) {
+            printf("Cannot find gap node after deallocation");
+            return ALLOC_NOT_FREED;
+        }
+
+
+
+        return ALLOC_OK;
     }
 
 
