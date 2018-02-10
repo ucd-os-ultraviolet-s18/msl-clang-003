@@ -320,6 +320,7 @@ alloc_status mem_pool_close(pool_pt pool) {
     // note: don't decrement pool_store_size, because it only grows
     // free mgr
 
+    // frees all of the attributes of the manager
     int i ;
     free(manager->pool.mem);
     manager->pool.mem = NULL;
@@ -399,6 +400,9 @@ void * mem_new_alloc(pool_pt pool, size_t size) {
 
                     // add the new (smaller) gap to the gap index
                     _mem_add_to_gap_ix(managerPtr, gapSize, newGapPtr);
+
+                    // update pool attributes
+                    pool->num_gaps++;
                 }
 
                 // do not need to reset newNode pointers if it takes up the entire allocation
@@ -407,6 +411,10 @@ void * mem_new_alloc(pool_pt pool, size_t size) {
                 newNode->alloc_record.size = size;
                 newNode->used = 1;
                 newNode->allocated = 1;
+
+                // update pool info
+                pool->num_allocs++;
+                pool->alloc_size = pool->alloc_size + size;
 
                 // return the user-requested memory
                 return newNode->alloc_record.mem;
