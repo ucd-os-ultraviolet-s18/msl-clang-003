@@ -95,6 +95,8 @@ static alloc_status _mem_invalidate_gap_ix(pool_mgr_pt pool_mgr);
 
 // FOR DEBUGGING PURPOSES ONLY
 void nodeReport(pool_mgr_pt managerPtr) {
+
+    /*
     printf("---------------------------\n");
     printf("Node Report\n");
     printf("---------------------------\n");
@@ -111,11 +113,12 @@ void nodeReport(pool_mgr_pt managerPtr) {
         printf("%zu\n", nodePtr->alloc_record.size);
         printf("---------------------------\n");
         nodePtr = nodePtr->next;
-    }
+    }*/
 }
 
 void gapReport(pool_mgr_pt managerPtr) {
 
+    /*
     printf("***************************\n");
     printf("Gap Report\n");
     printf("***************************\n");
@@ -126,7 +129,7 @@ void gapReport(pool_mgr_pt managerPtr) {
         printf("Size: ");
         printf("%zu\n", managerPtr->gap_ix[i].size);
         printf("***************************\n");
-    }
+    }*/
 }
 
 
@@ -915,7 +918,7 @@ static alloc_status _mem_add_to_gap_ix(pool_mgr_pt pool_mgr,
     // sort the gap index (call the function)
     _mem_sort_gap_ix(pool_mgr);
 
-    printf("Added gap\n");
+    //printf("Added gap\n");
     gapReport(pool_mgr);
 
     return ALLOC_OK;
@@ -946,7 +949,7 @@ static alloc_status _mem_remove_from_gap_ix(pool_mgr_pt pool_mgr,
 
     _mem_sort_gap_ix(pool_mgr);
 
-    printf("Removed gap\n");
+    //printf("Removed gap\n");
     gapReport(pool_mgr);
 
     return ALLOC_OK;
