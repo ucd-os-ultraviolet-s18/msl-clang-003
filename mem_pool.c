@@ -375,6 +375,9 @@ void * mem_new_alloc(pool_pt pool, size_t size) {
                 // remove the node from the gap index
                 _mem_remove_from_gap_ix(managerPtr, newNode->alloc_record.size, newNode);
 
+                // update pool attributes
+                pool->num_gaps--;
+
                 // if there is space left over, then we need to use another node to
                 // represent the gap
                 if (gapSize > size) {
@@ -420,28 +423,58 @@ void * mem_new_alloc(pool_pt pool, size_t size) {
                 return newNode->alloc_record.mem;
 
             }
-            else return NULL; // else there's no room for it
+            else {
+                printf("No room for node!");
+                return NULL;
+            } // else there's no room for it
         }
 
         return NULL; // returns null if a space wasn't found
     }
 
+
+    // with first fit, we traverse the linked list and find the first gap node
+    // where we can put stuff (size doesn't matter)
     else if (pool->policy == FIRST_FIT) {
+
+        printf("entering first_fit block\n");
 
         node_pt nodePtr = managerPtr->node_heap; // set ptr to point at first element in node heap
 
         // traverse until we find a node that isn't used and isn't too small
-        while (nodePtr->allocated == 1 || nodePtr->alloc_record.size < size) nodePtr = nodePtr->next;
+        while (nodePtr->allocated == 1 || nodePtr->alloc_record.size < size) {
+
+
+            nodePtr = nodePtr->next;
+        }
+
+        if (nodePtr == NULL) {
+            printf("No room for node!");
+            return NULL;
+        }
 
         // set new gapsize if there is one
         size_t gapSize = nodePtr->alloc_record.size - size;
 
+        printf("about to find node in gap index");
+
         // after this line, k will be index of gap pointer to get rid of
         int k = 0;
-        while (nodePtr != managerPtr->gap_ix[k].node) k++;
+        while (nodePtr != managerPtr->gap_ix[k].node && k < pool->num_gaps) k++;
+
+        // see if where we stopped is correct
+        if (nodePtr != managerPtr->gap_ix[k].node) {
+            printf("Could not find node in gap index");
+            return NULL;
+        }
 
         // remove from the gap index
         _mem_remove_from_gap_ix(managerPtr, nodePtr->alloc_record.size, managerPtr->gap_ix[k].node);
+
+        // adjust pool attributes
+        pool->num_gaps--;
+
+        printf("About to enter split block\n");
 
         // if gap size is bigger than zero, add a gap node
         if (gapSize > 0) {
@@ -467,6 +500,9 @@ void * mem_new_alloc(pool_pt pool, size_t size) {
 
             // add the new (smaller) gap to the gap index
             _mem_add_to_gap_ix(managerPtr, gapSize, newGapPtr);
+
+            // adjust pool attributes
+            pool->num_gaps++;
         }
 
         // do not need to reset newNode pointers if it takes up the entire allocation
@@ -475,6 +511,10 @@ void * mem_new_alloc(pool_pt pool, size_t size) {
         nodePtr->alloc_record.size = size;
         nodePtr->used = 1;
         nodePtr->allocated = 1;
+
+        // set pool attributes
+        pool->num_allocs++;
+        pool->alloc_size = pool->alloc_size + size;
 
         // return the user-requested memory
         return nodePtr->alloc_record.mem;
@@ -848,6 +888,8 @@ static alloc_status _mem_add_to_gap_ix(pool_mgr_pt pool_mgr,
 
     // expand the gap index, if necessary (call the function)
     // add the entry at the end
+
+
     // update metadata (num_gaps)
     // sort the gap index (call the function)
     // check success
@@ -877,7 +919,25 @@ static alloc_status _mem_sort_gap_ix(pool_mgr_pt pool_mgr) {
     //    node with a lower address of pool allocation address (mem)
     //       swap them (by copying) (remember to use a temporary variable)
 
-    return ALLOC_FAIL;
+    int i = 0;
+    gap_t temp;
+
+    while (pool_mgr->gap_ix[i+1].size != 0)
+    {
+        i++;
+    }
+
+
+
+    while (i != 0 && pool_mgr->gap_ix[i].size < pool_mgr->gap_ix[i-1].size )
+    {
+        temp = pool_mgr->gap_ix[i];
+        pool_mgr->gap_ix[i] = pool_mgr->gap_ix[i-1];
+        pool_mgr->gap_ix[i-1] = temp;
+        i--;
+    }
+
+    return ALLOC_OK;
 }
 
 static alloc_status _mem_invalidate_gap_ix(pool_mgr_pt pool_mgr) {
