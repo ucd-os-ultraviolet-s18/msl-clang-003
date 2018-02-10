@@ -438,7 +438,38 @@ void * mem_new_alloc(pool_pt pool, size_t size) {
         // if gap size is bigger than zero, add a gap node
         if (gapSize > 0) {
 
+            // look for next available node to hold the gap
+            int j = 0;
+            while (managerPtr->node_heap[j].used == 1) j++;
+
+            node_pt newGapPtr = &(managerPtr->node_heap[j]);
+
+            // sets new gap's attributes
+            newGapPtr->used = 1;
+            newGapPtr->alloc_record.size = gapSize;
+            newGapPtr->next = nodePtr->next;
+
+            // set the gap to go after the allocated node
+            // newnode prev should still be fine
+
+            nodePtr->next = newGapPtr;
+
+            // set gap node after new node
+            newGapPtr->prev = nodePtr;
+
+            // add the new (smaller) gap to the gap index
+            _mem_add_to_gap_ix(managerPtr, gapSize, newGapPtr);
         }
+
+        // do not need to reset newNode pointers if it takes up the entire allocation
+
+        // set newNode attributes:
+        nodePtr->alloc_record.size = size;
+        nodePtr->used = 1;
+        nodePtr->allocated = 1;
+
+        // return the user-requested memory
+        return nodePtr->alloc_record.mem;
     }
 
 
