@@ -396,9 +396,6 @@ alloc_status mem_pool_close(pool_pt pool) {
 
 void * mem_new_alloc(pool_pt pool, size_t size) {
 
-    printf("--------------------------\n");
-    printf("Allocating new memory pool\n");
-    printf("--------------------------\n");
 
     // get mgr from pool by casting the pointer to (pool_mgr_pt)
     pool_mgr_pt managerPtr = ((pool_mgr_pt)pool);
@@ -602,8 +599,7 @@ alloc_status mem_del_alloc(pool_pt pool, void * alloc) {
     // then just move the pointer up one node
     // then next block will take over with merging
     if (nodePtr->prev != NULL && nodePtr->prev->allocated == 0) {
-        printf("Gap before node, pointing to prevNode: ");
-        printf("%p\n", nodePtr->prev);
+
         nodePtr = nodePtr->prev;
 
         // this is set for below when we check for success
@@ -612,8 +608,6 @@ alloc_status mem_del_alloc(pool_pt pool, void * alloc) {
 
     // if the next node in the list is also a gap, merge into node-to-delete
     if (nodePtr->next != NULL && nodePtr->next->allocated == 0) {
-
-        printf("Gap after node\n");
 
         node_pt extraGap = nodePtr->next;
 
@@ -657,8 +651,6 @@ alloc_status mem_del_alloc(pool_pt pool, void * alloc) {
     // an ugly way to do it
     // but it saves me writing different code for a post-node deletion
     if (nodePtr->next != NULL && nodePtr->next->allocated == 0) {
-
-        printf("Gap after node\n");
 
         node_pt extraGap = nodePtr->next;
 
@@ -826,16 +818,8 @@ static alloc_status _mem_resize_node_heap(pool_mgr_pt pool_mgr) {
         }
     }
 
-    printf("Used nodes: ");
-    printf("%u\n", pool_mgr->used_nodes);
-
-    printf("Total nodes: ");
-    printf("%u\n", pool_mgr->total_nodes);
-
     if (((float) pool_mgr->used_nodes/ pool_mgr->total_nodes)
         > MEM_NODE_HEAP_FILL_FACTOR){
-
-        printf("******Resizing node heap*********\n");
 
         int gapIndexTemp[pool_mgr->total_nodes];
 
