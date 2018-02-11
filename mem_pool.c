@@ -94,7 +94,10 @@ static alloc_status _mem_sort_gap_ix(pool_mgr_pt pool_mgr);
 static alloc_status _mem_invalidate_gap_ix(pool_mgr_pt pool_mgr);
 
 // FOR DEBUGGING PURPOSES ONLY
-void nodeReport(pool_mgr_pt managerPtr) {
+void nodeReport(pool_pt pool) { /*
+
+    pool_mgr_pt managerPtr = ((pool_mgr_pt)pool);
+
     printf("---------------------------\n");
     printf("Node Report\n");
     printf("---------------------------\n");
@@ -115,7 +118,7 @@ void nodeReport(pool_mgr_pt managerPtr) {
         printf("%p\n", nodePtr->next);
         printf("---------------------------\n");
         nodePtr = nodePtr->next;
-    }
+    } */
 
 }
 
@@ -393,11 +396,21 @@ alloc_status mem_pool_close(pool_pt pool) {
 
 void * mem_new_alloc(pool_pt pool, size_t size) {
 
+    printf("--------------------------\n");
+    printf("Allocating new memory pool\n");
+    printf("--------------------------\n");
+
     // get mgr from pool by casting the pointer to (pool_mgr_pt)
     pool_mgr_pt managerPtr = ((pool_mgr_pt)pool);
 
     // check if any gaps, return null if none
-    if (pool->num_gaps == 0) return NULL;
+    if (pool->num_gaps == 0) {
+        printf("No gaps available!\n");
+        return NULL;
+    }
+
+    // resize node heap if too small
+    _mem_resize_node_heap(managerPtr);
 
     // points to gap node where the new allocation will go
     node_pt nodeToReplace = NULL;
@@ -494,6 +507,8 @@ void * mem_new_alloc(pool_pt pool, size_t size) {
 
         // add the new (smaller) gap to the gap index
         _mem_add_to_gap_ix(managerPtr, gapSize, newGapPtr);
+
+        managerPtr->used_nodes++;
     }
 
     // do not need to reset newNode pointers if it takes up the entire allocation
@@ -507,7 +522,21 @@ void * mem_new_alloc(pool_pt pool, size_t size) {
     pool->num_allocs++;
     pool->alloc_size = pool->alloc_size + size;
 
-    nodeReport(managerPtr);
+    /*
+    printf("Address: ");
+    printf("%p\n", nodeToReplace);
+    printf("Is used: ");
+    printf("%u\n", nodeToReplace->used);
+    printf("Is allocated: ");
+    printf("%u\n", nodeToReplace->allocated);
+    printf("Space allocated: ");
+    printf("%d\n", (int)nodeToReplace->alloc_record.size);
+    printf("Prev node: ");
+    printf("%p\n", nodeToReplace->prev);
+    printf("Next node: ");
+    printf("%p\n", nodeToReplace->next);
+    printf("---------------------------\n");
+     */
 
     // return the user-requested memory
     return ((alloc_pt)nodeToReplace);
@@ -621,7 +650,6 @@ alloc_status mem_del_alloc(pool_pt pool, void * alloc) {
         if (nodePtr->next != NULL)
             nodePtr->next->prev = nodePtr;
 
-        nodeReport(managerPtr);
     }
 
     // this block is required for if there is a gap at the beginning as well as the end
@@ -667,7 +695,6 @@ alloc_status mem_del_alloc(pool_pt pool, void * alloc) {
         if (nodePtr->next != NULL)
             nodePtr->next->prev = nodePtr;
 
-        nodeReport(managerPtr);
     }
 
     // this merged node-to-delete might need to be added to the gap index
@@ -694,7 +721,6 @@ alloc_status mem_del_alloc(pool_pt pool, void * alloc) {
         return ALLOC_FAIL;
     }
 
-    nodeReport(managerPtr);
 
     // _mem_remove_from_gap_ix() already increments the number of gaps
     //if ( managerPtr->pool.num_gaps == 0)//managerPtr->pool.alloc_size == 0 &&
@@ -800,9 +826,16 @@ static alloc_status _mem_resize_node_heap(pool_mgr_pt pool_mgr) {
         }
     }
 
+    printf("Used nodes: ");
+    printf("%u\n", pool_mgr->used_nodes);
+
+    printf("Total nodes: ");
+    printf("%u\n", pool_mgr->total_nodes);
 
     if (((float) pool_mgr->used_nodes/ pool_mgr->total_nodes)
         > MEM_NODE_HEAP_FILL_FACTOR){
+
+        printf("******Resizing node heap*********\n");
 
         int gapIndexTemp[pool_mgr->total_nodes];
 
