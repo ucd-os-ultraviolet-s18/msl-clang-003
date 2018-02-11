@@ -95,8 +95,6 @@ static alloc_status _mem_invalidate_gap_ix(pool_mgr_pt pool_mgr);
 
 // FOR DEBUGGING PURPOSES ONLY
 void nodeReport(pool_mgr_pt managerPtr) {
-
-    /*
     printf("---------------------------\n");
     printf("Node Report\n");
     printf("---------------------------\n");
@@ -113,7 +111,8 @@ void nodeReport(pool_mgr_pt managerPtr) {
         printf("%zu\n", nodePtr->alloc_record.size);
         printf("---------------------------\n");
         nodePtr = nodePtr->next;
-    }*/
+    }
+
 }
 
 void gapReport(pool_mgr_pt managerPtr) {
@@ -581,7 +580,10 @@ void * mem_new_alloc(pool_pt pool, size_t size) {
         // find the node in the node heap
         // this is node-to-delete
         node_pt nodePtr = managerPtr->node_heap; // point at head of linked list
+
         while (nodePtr != deletePtr) nodePtr = nodePtr->next; // traverse to find node
+
+        printf("Found the node to delete\n");
 
         // if we've gone to the end of the list and not found it
         if (nodePtr == NULL) {
@@ -596,15 +598,19 @@ void * mem_new_alloc(pool_pt pool, size_t size) {
         // add gap to gap index
         _mem_add_to_gap_ix(managerPtr, nodePtr->alloc_record.size, nodePtr);
 
+        printf("Added node to gap index\n");
+
         // update metadata (num_allocs, alloc_size)
         pool->num_allocs--;
         pool->alloc_size = pool->alloc_size - nodePtr->alloc_record.size;
 
-
-
         // if the next node in the list is also a gap, merge into node-to-delete
 
-        if (nodePtr->next->allocated == 0) {
+        printf("Changed pool attributes\n");
+
+        if (nodePtr->next != NULL && nodePtr->next->allocated == 0) {
+
+            printf("Next node is a gap\n");
 
             node_pt extraGap = nodePtr->next;
 
@@ -637,8 +643,10 @@ void * mem_new_alloc(pool_pt pool, size_t size) {
         }
 
         // -----------------------------------------------------------------------------------
-        // if the previous node is a gap node
-        if (nodePtr->prev->allocated == 0) {
+        // if the previous node is a gap node and not the head pointer
+        if (nodePtr->prev != NULL && nodePtr->prev->allocated == 0) {
+
+            printf("Prev node is a gap\n");
 
             node_pt extraGap = nodePtr->prev;
 
@@ -683,6 +691,8 @@ void * mem_new_alloc(pool_pt pool, size_t size) {
         //   update metadata (used_nodes)
         //   change the node to add to the previous node!
         // add the resulting node to the gap index
+
+        printf("Successfully merged gaps\n");
 
         // organize gap index
         _mem_sort_gap_ix(managerPtr);
