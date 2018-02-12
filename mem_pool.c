@@ -729,15 +729,27 @@ void mem_inspect_pool(pool_pt pool,
                       pool_segment_pt *segments,
                       unsigned *num_segments) {
 
+    /*
+     *  This function is used to visualize and/or test the state of the pool as allocations are made and deleted
+        It creates a representation of the pool in terms of _“memory segments”_ (`segment_t` structure in `mem_pool.h`),
+            a segment for each node in `node_heap`
+        Only _used_ nodes need to be represented
+        You create an array of segments in the order in which the memory segments are in the pool,
+            from top to bottom (that is, from address “zero” to address “zero” + size of pool),
+            so you need to traverse the `node_heap` *as a linked list*, not array
+        The function’s arguments are double pointers so you _“return”_ through them.
+            The function allocates the memory, the caller is responsible for freeing it.
+     */
+
     int i;
     int j;
     pool_mgr_pt manager = ((pool_mgr_pt)pool);
 
-// get the mgr from the pool
+    // get the mgr from the pool
     // allocate the segments array with size == used_nodes
 
     //segments = malloc(sizeof(pool_segment_pt));
-    *segments = malloc(manager->used_nodes* sizeof(pool_segment_pt));
+    *segments = malloc(manager->used_nodes* sizeof(pool_segment_t));
     assert(segments != NULL);
 
     // check successful
